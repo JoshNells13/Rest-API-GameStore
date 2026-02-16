@@ -42,6 +42,38 @@ class ScoreController extends Controller
         ], 200);
     }
 
+    public function StoreGameScore(Request $request, $slug)
+    {
+        $request->validate([
+            'score' => 'required|integer|min:0'
+        ]);
 
-    public function AddScore() {}
+        $game = Game::where('slug', trim($slug))->first();
+
+        if (!$game) {
+            return response([
+                'message' => 'Game not found'
+            ], 404);
+        }
+
+        $latestVersion = $game->gameversions()->latest('created_at')->first();
+
+        if (!$latestVersion) {
+            return response([
+                'message' => 'No game version available'
+            ], 400);
+        }
+
+        $score = Score::create([
+            'user_id' => $request->user()->id,
+            'game_version_id' => $latestVersion->id,
+            'score' => $request->score
+        ]);
+
+        return response([
+            'score' => $score
+        ], 201);
+    }
+
+
 }

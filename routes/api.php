@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthAdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\GameUploadController;
+use App\Http\Controllers\ScoreController;
 use App\Http\Controllers\UserController;
 use App\Models\Score;
 use Illuminate\Container\Attributes\Auth;
@@ -14,44 +15,37 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::prefix('v1')->group(function(){
+Route::prefix('v1')->group(function () {
 
 
-    Route::post('auth/login',[AuthController::class,'Login']);
-    Route::post('auth/signup',[AuthController::class,'SignUp']);
+    Route::post('auth/signup', [AuthController::class, 'signup']);
+    Route::post('auth/signin', [AuthController::class, 'signin']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+
+        Route::post('auth/signout', [AuthController::class, 'signout']);
 
 
+        Route::get('admins', [UserController::class, 'getAdmins']);
 
 
-    Route::middleware('auth:sanctum')->group(function(){
+        Route::get('users', [UserController::class, 'getUsers']);
+        Route::post('users', [UserController::class, 'store']);
+        Route::put('users/{id}', [UserController::class, 'update']);
+        Route::delete('users/{id}', [UserController::class, 'destroy']);
+        Route::get('users/{username}', [UserController::class, 'show']);
 
 
-
-        Route::post('auth/signout',[AuthController::class,'SignOut']);
-
-        Route::get('users',[UserController::class,'GetAdmin']);
-        Route::post('users',[UserController::class,'AddUser']);
-
-
-        Route::put('users/{id}',[UserController::class,'UpdateUser']);
-        Route::delete('users/{id}',[UserController::class,'DeleteUser']);
+        Route::get('games', [GameController::class, 'index']);
+        Route::post('games', [GameController::class, 'store']);
+        Route::get('games/{slug}', [GameController::class, 'show']);
+        Route::put('games/{slug}', [GameController::class, 'update']);
+        Route::delete('games/{slug}', [GameController::class, 'destroy']);
 
 
-        Route::get('games',[GameController::class,'GetGame']);
-        Route::post('games',[GameController::class,'AddGame']);
-        Route::get('games/{slug}',[GameController::class,'GetDetailGames']);
+        Route::post('games/{slug}/upload', [GameUploadController::class, 'upload']);
 
-        Route::post('games/{slug}/upload',[GameUploadController::class,'GameFileUpload']);
-        Route::get('games/{slug}/{version}',[GameUploadController::class,'GetGamesVersion']);
-
-
-        Route::put('games/{slug}',[GameController::class,'UpdateGame']);
-
-        Route::delete('games/{slug}',[GameController::class,'DeleteGames']);
-        Route::get('user/{username}',[UserController::class,'GetDetailUser']);
-
-        Route::get('games/{slug}/scores',[Score::class,'GetGameScore']);
-        Route::post('games/{slug}/scores');
-
+        Route::get('games/{slug}/scores', [ScoreController::class, 'index']);
+        Route::post('games/{slug}/scores', [ScoreController::class, 'store']);
     });
 });

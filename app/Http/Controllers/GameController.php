@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Game;
 use App\Models\gameversion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class GameController extends Controller
@@ -24,28 +25,49 @@ class GameController extends Controller
         return $slug;
     }
 
-    public function GetGame(Request $request)
+    public function index(Request $request)
     {
         $request->validate([
-            'page' => 'numeric|min:0',
-            'size' => 'numeric|min:0|max:10'
+            'page' => 'nullable|integer|min:0',
+            'size' => 'nullable|integer|min:1',
+            'sortBy' => 'nullable|in:title,popular,uploaddate',
+            'sortDir' => 'nullable|in:asc,desc'
         ]);
 
+        $page = $request->input('page', 0);
         $size = $request->input('size', 10);
+        $sortBy = $request->input('sortBy', 'title');
+        $sortDir = $request->input('sortDir', 'asc');
 
-        $Game = Game::orderBy('created_at', 'DESC')
-            ->paginate($size)
-            ->appends(request()->query());
+        $query = Game::has('versions'); // exclude game tanpa version
+
+        if ($sortBy === 'title') {
+            $query->orderBy('title', $sortDir);
+        }
+
+        if ($sortBy === 'popular') {
+            $query->withCount('scores')
+                ->orderBy('scores_count', $sortDir);
+        }
+
+        if ($sortBy === 'uploaddate') {
+            $query->withMax('versions', 'created_at')
+                ->orderBy('versions_max_created_at', $sortDir);
+        }
+
+        $totalElements = $query->count();
+
+        $games = $query->skip($page * $size)
+            ->take($size)
+            ->get();
 
         return response([
-            'total_element' => $Game->count(),
-            'pages' => $Game->currentPage(),
-            'size' => $Game->perPage(),
-            'data' => $Game
-        ]);
+            'page' => $page,
+            'size' => $games->count(),
+            'totalElements' => $totalElements,
+            'content' => $games
+        ], 200);
     }
-
-
     public function AddGame(Request $request)
     {
         $request->validate([
@@ -55,12 +77,6 @@ class GameController extends Controller
         ]);
 
 
-        if ($request->user()->role !== 'developer') {
-            return response([
-                'message' => 'forbidden',
-                'status' => 'not developer'
-            ], 403);
-        }
 
 
         $file = $request->thumbnail;
@@ -92,12 +108,15 @@ class GameController extends Controller
             ], 404);
         }
 
-        if ($request->user()->role !== 'developer') {
+        $CheckUser = Auth::user()->id;
+
+        if (!Game::where('slug', $slug)->where('created_by', $CheckUser)->exists()) {
             return response([
-                'message' => 'forbidden',
-                'status' => 'not developer'
+                'message' => 'Forbidden',
+                'status' => 'Not Developer'
             ], 403);
         }
+
 
         $request->validate([
             'title' => 'required|min:3|max:60|unique:games,title,' . $Game->id,
@@ -124,41 +143,47 @@ class GameController extends Controller
         ]);
     }
 
-    public function GetDetailGames(Request $request,$slug){
+    public function GetDetailGames(Request $request, $slug)
+    {
         $GamesDetail = Game::where('slug', $slug)->first();
 
-        if(!$GamesDetail){
+        if (!$GamesDetail) {
             return  response([
-                'message' => 'Game Not Found' 
-            ],404);
+                'message' => 'Game Not Found'
+            ], 404);
         }
 
         return response([
-            'game' => $GamesDetail 
-        ],200);
+            'game' => $GamesDetail
+        ], 200);
     }
 
 
-    public function DeleteGames(Request $request, $slug){
-        
+    public function DeleteGames(Request $request, $slug)
+    {
+
         $Game = Game::where('slug', $slug)->first();
 
-        if($request->user()->role !== 'developer'){
+        $CheckUser = Auth::user()->id;
+
+
+        if (!$Game) {
+            return response([
+                'message' => 'Game Not Found'
+            ], 404);
+        }
+
+
+        if (!Game::where('slug', $slug)->where('created_by', $CheckUser)->exists()) {
             return response([
                 'message' => 'Forbidden',
                 'status' => 'Not Developer'
-            ],403);
+            ], 403);
         }
 
-        if(!$Game){
-            return response([
-                'message' => 'Game Not Found'
-            ],404);
-        }
 
         $Game->delete();
 
-        return response([],204);
-
+        return response([], 204);
     }
 }

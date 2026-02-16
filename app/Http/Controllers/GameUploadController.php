@@ -17,17 +17,23 @@ class GameUploadController extends Controller
             'storage_path' => 'required|mimes:png,jpg'
         ]);
 
+        $Game = Game::where('slug', $slug)->first();
 
         $CheckUser = Auth::user()->id;
 
-        if(!Game::where('created_by', $CheckUser)->exists()){
+
+        if (!$Game) {
+            return response([
+                'message' => 'Game Not Found'
+            ], 404);
+        }
+
+        if(!Game::where('slug', $slug)->where('created_by', $CheckUser)->exists()){
             return response([
                 'message' => 'Forbidden',
                 'status' => 'Not Developer'
             ],403);
         }
-
-        $Game = Game::where('slug', $slug)->exists();
 
         $file = $request->storage_path;
         $storage = $file->storeAs('games', $file->getClientOriginalName(), 'public');
