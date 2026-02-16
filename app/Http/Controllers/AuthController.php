@@ -12,13 +12,11 @@ class AuthController extends Controller
         $request->validate([
             'username' => 'required|min:4|max:60|unique:users,username',
             'password' => 'required|min:5|max:10',
-            'role' => 'required'
         ]);
 
         $user = User::create([
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'role' => $request->role
         ]);
 
         return response([
@@ -47,13 +45,13 @@ class AuthController extends Controller
             'status' => 'success',
             'token' => $user->createToken('login_tokens')->plainTextToken
         ],201);
-    }   
+    }
 
     public function SignOut(Request $request){
         $request->user()->currentAccessToken()->delete();
 
         return response([
             'status' => 'success'
-        ]);
+        ],200);
     }
 }
