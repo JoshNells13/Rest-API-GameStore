@@ -20,15 +20,15 @@ Route::prefix('v1')->group(function(){
     Route::post('auth/login',[AuthController::class,'Login']);
     Route::post('auth/signup',[AuthController::class,'SignUp']);
 
-    Route::post('login/admin',[AuthAdminController::class,'Login']);
-    
-    
+
+
+
     Route::middleware('auth:sanctum')->group(function(){
-        Route::post('signup/admin',[AuthAdminController::class,'SignUp']);
+
 
 
         Route::post('auth/signout',[AuthController::class,'SignOut']);
-        
+
         Route::get('users',[UserController::class,'GetAdmin']);
         Route::post('users',[UserController::class,'AddUser']);
 
@@ -36,7 +36,7 @@ Route::prefix('v1')->group(function(){
         Route::put('users/{id}',[UserController::class,'UpdateUser']);
         Route::delete('users/{id}',[UserController::class,'DeleteUser']);
 
-        
+
         Route::get('games',[GameController::class,'GetGame']);
         Route::post('games',[GameController::class,'AddGame']);
         Route::get('games/{slug}',[GameController::class,'GetDetailGames']);
