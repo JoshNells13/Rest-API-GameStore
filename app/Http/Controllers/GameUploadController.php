@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Game;
 use App\Models\gameversion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class GameUploadController extends Controller
@@ -16,14 +17,17 @@ class GameUploadController extends Controller
             'storage_path' => 'required|mimes:png,jpg'
         ]);
 
-        if($request->user()->role !== 'developer'){
+
+        $CheckUser = Auth::user()->id;
+
+        if(!Game::where('created_by', $CheckUser)->exists()){
             return response([
                 'message' => 'Forbidden',
                 'status' => 'Not Developer'
-            ]);
+            ],403);
         }
 
-        $Game = Game::where('slug', $slug)->first();
+        $Game = Game::where('slug', $slug)->exists();
 
         $file = $request->storage_path;
         $storage = $file->storeAs('games', $file->getClientOriginalName(), 'public');
