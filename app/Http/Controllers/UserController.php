@@ -30,7 +30,7 @@ class UserController extends Controller
     }
 
 
-    public function AddUser(RegisterRequest $request)
+    public function store(RegisterRequest $request)
     {
 
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
@@ -55,7 +55,7 @@ class UserController extends Controller
     }
 
 
-    public function UpdateUser(RegisterRequest $request, $id)
+    public function update(RegisterRequest $request, $id)
     {
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
 
@@ -89,7 +89,7 @@ class UserController extends Controller
     }
 
 
-    public function DeleteUser(Request $request, $id)
+    public function destroy(Request $request, $id)
     {
 
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
@@ -116,7 +116,7 @@ class UserController extends Controller
     }
 
 
-    public function GetDetailUser($user){
+    public function show($user){
         $user = User::where('username', $user)->with(['Game','Score'])->first();
 
         if(!$user){
