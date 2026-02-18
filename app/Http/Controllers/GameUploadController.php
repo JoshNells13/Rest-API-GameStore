@@ -15,69 +15,76 @@ class GameUploadController extends Controller
 {
     public function GameFileUpload(Request $request, $slug)
     {
-        // 1️⃣ Validate required fields (zipfile + token)
-        if (!$request->hasFile('zipfile') || !$request->token) {
-            return response("Invalid request", 400);
+        try {
+            // 1️⃣ Validate required fields (zipfile + token)
+            if (!$request->hasFile('zipfile') || !$request->token) {
+                return response("Invalid request", 400);
+            }
+
+            // 2️⃣ Validate token from form param (NOT header)
+            $accessToken = PersonalAccessToken::findToken($request->token);
+
+            if (!$accessToken) {
+                return response("Invalid token", 401);
+            }
+
+            $user = $accessToken->tokenable;
+
+
+            $game = Game::where('slug', $slug)->first();
+
+            if (!$game) {
+                return response("Game not found", 404);
+            }
+
+
+            if ($user->id !== $game->created_by) {
+                return response("User is not author of the game", 403);
+            }
+
+
+            $latestVersion = gameversion::where('game_id', $game->id)->max('version') ?? 0;
+            $newVersion = $latestVersion + 1;
+
+
+            $destinationPath = public_path("games/{$slug}/{$newVersion}");
+
+            if (!File::exists($destinationPath)) {
+                File::makeDirectory($destinationPath, 0777, true);
+            }
+
+
+            $zip = new ZipArchive;
+            $zipFile = $request->file('zipfile')->getRealPath();
+
+            if ($zip->open($zipFile) === TRUE) {
+                $zip->extractTo($destinationPath);
+                $zip->close();
+            } else {
+                return response("Failed to extract zip file", 400);
+            }
+
+
+            gameversion::create([
+                'game_id' => $game->id,
+                'version' => $newVersion,
+                'storage_path' => "/games/{$slug}/{$newVersion}/"
+            ]);
+
+
+            $game->update([
+                'storage_path' => "/games/{$slug}/{$newVersion}/"
+            ]);
+
+            return response()->json([
+                'status' => 'success'
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        // 2️⃣ Validate token from form param (NOT header)
-        $accessToken = PersonalAccessToken::findToken($request->token);
-
-        if (!$accessToken) {
-            return response("Invalid token", 401);
-        }
-
-        $user = $accessToken->tokenable;
-
-
-        $game = Game::where('slug', $slug)->first();
-
-        if (!$game) {
-            return response("Game not found", 404);
-        }
-
-
-        if ($user->id !== $game->created_by) {
-            return response("User is not author of the game", 403);
-        }
-
-
-        $latestVersion = gameversion::where('game_id', $game->id)->max('version') ?? 0;
-        $newVersion = $latestVersion + 1;
-
-
-        $destinationPath = public_path("games/{$slug}/{$newVersion}");
-
-        if (!File::exists($destinationPath)) {
-            File::makeDirectory($destinationPath, 0777, true);
-        }
-
-
-        $zip = new ZipArchive;
-        $zipFile = $request->file('zipfile')->getRealPath();
-
-        if ($zip->open($zipFile) === TRUE) {
-            $zip->extractTo($destinationPath);
-            $zip->close();
-        } else {
-            return response("Failed to extract zip file", 400);
-        }
-
-
-        gameversion::create([
-            'game_id' => $game->id,
-            'version' => $newVersion,
-            'storage_path' => "/games/{$slug}/{$newVersion}/"
-        ]);
-
-
-        $game->update([
-            'storage_path' => "/games/{$slug}/{$newVersion}/"
-        ]);
-
-        return response()->json([
-            'status' => 'success'
-        ], 201);
     }
 
 

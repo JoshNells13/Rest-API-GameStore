@@ -31,49 +31,54 @@ class GameController extends Controller
 
     public function index(GetGameRequest $request)
     {
-        $page = $request->input('page', 0);
-        $size = $request->input('size', 10);
-        $sortBy = $request->input('sortBy', 'title');
-        $sortDir = $request->input('sortDir', 'asc');
+        try {
+            $page = $request->input('page', 0);
+            $size = $request->input('size', 10);
+            $sortBy = $request->input('sortBy', 'title');
+            $sortDir = $request->input('sortDir', 'asc');
 
-        $query = Game::has('versions');
+            $query = Game::has('versions');
 
-        switch ($sortBy) {
-            case 'popular':
-                $query->withCount('scores')
-                    ->orderBy('scores_count', $sortDir);
-                break;
+            switch ($sortBy) {
+                case 'popular':
+                    $query->withCount('scores')
+                        ->orderBy('scores_count', $sortDir);
+                    break;
 
-            case 'uploaddate':
-                $query->withMax('versions', 'created_at')
-                    ->orderBy('versions_max_created_at', $sortDir);
-                break;
+                case 'uploaddate':
+                    $query->withMax('versions', 'created_at')
+                        ->orderBy('versions_max_created_at', $sortDir);
+                    break;
 
-            default:
-                $query->orderBy('title', $sortDir);
-                break;
+                default:
+                    $query->orderBy('title', $sortDir);
+                    break;
+            }
+
+            $totalElements = $query->count();
+
+            $games = $query->skip($page * $size)
+                ->take($size)
+                ->get();
+
+            return response([
+                'page' => $page,
+                'size' => $games->count(),
+                'totalElements' => $totalElements,
+                'content' => GameResource::collection($games)
+            ], 200);
+        } catch (ValidationException $e) {
+            return response([
+                'message' => 'Invalid query parameters',
+                'errors' => $e->errors()
+            ], 422);
         }
-
-        $totalElements = $query->count();
-
-        $games = $query->skip($page * $size)
-            ->take($size)
-            ->get();
-
-        return response([
-            'page' => $page,
-            'size' => $games->count(),
-            'totalElements' => $totalElements,
-            'content' => GameResource::collection($games)
-        ]);
     }
 
 
     public function store(GameRequest $request)
     {
         try {
-
-
             $slug = $this->generateUniqueSlug($request->title);
 
             $game = Game::create([
@@ -98,76 +103,96 @@ class GameController extends Controller
 
     public function update(GameRequest $request, $slug)
     {
-        $game = Game::where('slug', $slug)->first();
+        try {
+            $game = Game::where('slug', $slug)->first();
 
-        if (!$game) {
+            if (!$game) {
+                return response([
+                    'message' => 'Game Not Found'
+                ], 404);
+            }
+
+            if ($game->created_by !== $request->user()->id) {
+                return response([
+                    'message' => 'Forbidden'
+                ], 403);
+            }
+
+            $data = [
+                'title' => $request->title,
+                'description' => $request->description,
+            ];
+
+
+            $game->update($data);
+
             return response([
-                'message' => 'Game Not Found'
-            ], 404);
-        }
-
-        if ($game->created_by !== $request->user()->id) {
+                'message' => 'Update Game Success',
+                'data' => new GameResource($game)
+            ], 201);
+        } catch (\Exception $e) {
             return response([
-                'message' => 'Forbidden'
-            ], 403);
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $data = [
-            'title' => $request->title,
-            'description' => $request->description,
-        ];
-
-
-        $game->update($data);
-
-        return response([
-            'message' => 'Update Game Success',
-            'data' => new GameResource($game)
-        ]);
     }
 
 
     public function show(Request $request, $slug)
     {
-        $GamesDetail = Game::where('slug', $slug)->first();
+        try {
+            $GamesDetail = Game::where('slug', $slug)->first();
 
-        if (!$GamesDetail) {
-            return  response([
-                'message' => 'Game Not Found'
-            ], 404);
+            if (!$GamesDetail) {
+                return  response([
+                    'message' => 'Game Not Found'
+                ], 404);
+            }
+
+            return response([
+                'game' => $GamesDetail
+            ], 200);
+        } catch (\Exception $e) {
+            return response([
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response([
-            'game' => $GamesDetail
-        ], 200);
     }
 
 
     public function destroy(Request $request, $slug)
     {
+        try {
+            $Game = Game::where('slug', $slug)->first();
 
-        $Game = Game::where('slug', $slug)->first();
-
-        $CheckUser = Auth::user()->id;
+            $CheckUser = Auth::user()->id;
 
 
-        if (!$Game) {
+            if (!$Game) {
+                return response([
+                    'message' => 'Game Not Found'
+                ], 404);
+            }
+
+
+            if (!Game::where('slug', $slug)->where('created_by', $CheckUser)->exists()) {
+                return response([
+                    'message' => 'Forbidden',
+                    'status' => 'Not Developer'
+                ], 403);
+            }
+
+
+            $Game->delete();
+
+            return response([], 204);
+        } catch (\Exception $e) {
             return response([
-                'message' => 'Game Not Found'
-            ], 404);
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-
-        if (!Game::where('slug', $slug)->where('created_by', $CheckUser)->exists()) {
-            return response([
-                'message' => 'Forbidden',
-                'status' => 'Not Developer'
-            ], 403);
-        }
-
-
-        $Game->delete();
-
-        return response([], 204);
     }
 }
