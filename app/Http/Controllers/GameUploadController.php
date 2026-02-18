@@ -76,6 +76,14 @@ class GameUploadController extends Controller
                 'storage_path' => "/games/{$slug}/{$newVersion}/"
             ]);
 
+            if($request->hasFile('thumbnail')){
+                $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
+                $game->update([
+                    'thumbnail' => $thumbnailPath
+                ]);
+            }
+
+
             return response()->json([
                 'status' => 'success'
             ], 201);

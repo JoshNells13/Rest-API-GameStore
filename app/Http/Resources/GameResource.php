@@ -21,7 +21,10 @@ class GameResource extends JsonResource
             'thumbnail' => $this->thumbnail,
             'uploadTimestamp' => optional($this->versions()->latest()->first())->created_at?->toISOString(),
             'author' => optional($this->author)->username,
-            'scoreCount' => $this->scores()->count(),
+            'scoreCount' => $this->versions?->sum(function ($version) {
+                return $version->scores?->count() ?? 0;
+            }) ?? 0,
+
         ];
     }
 }

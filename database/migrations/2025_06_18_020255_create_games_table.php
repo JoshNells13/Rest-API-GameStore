@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('title');
             $table->string('slug');
             $table->string('description');
+            $table->string('thumbnail')->nullable();
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
             $table->string('ScoreCount')->nullable();
             $table->timestamps();
