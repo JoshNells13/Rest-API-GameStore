@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\GameRequest;
+use App\Http\Resources\GameResource;
 use App\Models\Game;
 use App\Models\gameversion;
 use Illuminate\Http\Request;
@@ -65,19 +67,11 @@ class GameController extends Controller
             'page' => $page,
             'size' => $games->count(),
             'totalElements' => $totalElements,
-            'content' => $games
+            'content' => GameResource::collection($games)
         ], 200);
     }
-    public function AddGame(Request $request)
+    public function AddGame(GameRequest $request)
     {
-        $request->validate([
-            'title' => 'required|min:3|max:60|unique:games,title',
-            'description' => 'required|max:200|',
-            'thumbnail' => 'file|mimes:png,jpg'
-        ]);
-
-
-
 
         $file = $request->thumbnail;
         $thumbnail = $file->storeAs('games_thumbnail', $file->getClientOriginalName(), 'public');
@@ -98,7 +92,7 @@ class GameController extends Controller
         ]);
     }
 
-    public function UpdateGame(Request $request, $slug)
+    public function UpdateGame(GameRequest $request, $slug)
     {
         $Game = Game::where('slug', $slug)->first();
 
@@ -116,13 +110,6 @@ class GameController extends Controller
                 'status' => 'Not Developer'
             ], 403);
         }
-
-
-        $request->validate([
-            'title' => 'required|min:3|max:60|unique:games,title,' . $Game->id,
-            'description' => 'required|max:200|',
-            'thumbnail' => 'file|mimes:png,jpg'
-        ]);
 
         // 🔧 Simpan thumbnail baru
         $file = $request->thumbnail;

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UserRequest;
 use App\Models\administrator;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -13,9 +14,9 @@ class UserController extends Controller
     {
         $user = administrator::all();
 
-        $checkAdmin = User::where('id', $request->user()->id)->first();
+        $checkAdmin = administrator::where('id', $request->user()->id)->first();
 
-        if ($checkAdmin) {
+        if (!$checkAdmin) {
             return response([
                 'status' => 'forbidden',
                 'message' => 'You are not the administrator'
@@ -29,13 +30,8 @@ class UserController extends Controller
     }
 
 
-    public function AddUser(Request $request)
+    public function AddUser(UserRequest $request)
     {
-        $request->validate([
-            'username' => 'required|min:4|max:60|unique:users,username',
-            'password' => 'required|min:5|max:10',
-            'role' => 'required'
-        ]);
 
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
 
@@ -60,14 +56,8 @@ class UserController extends Controller
     }
 
 
-    public function UpdateUser(Request  $request, $id)
+    public function UpdateUser(UserRequest $request, $id)
     {
-        $request->validate([
-            'username' => 'required|min:4|max:60|unique:users,username,'. $id . ',id',
-            'password' => 'required|min:5|max:10',
-            'role' => 'required'
-        ]);
-
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
 
         if (!$checkAdmin) {
@@ -127,7 +117,7 @@ class UserController extends Controller
     }
 
 
-    public function GetDetailUser(Request $request, $user){
+    public function GetDetailUser($user){
         $user = User::where('username', $user)->with(['Game','Score'])->first();
 
         if(!$user){
