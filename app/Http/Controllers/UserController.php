@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function GetAdmin(Request $request)
+    public function getadmin(Request $request)
     {
         $user = administrator::all();
 
