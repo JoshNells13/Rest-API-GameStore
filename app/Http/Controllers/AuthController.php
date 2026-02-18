@@ -18,9 +18,11 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        $token = $user->createToken('sign_tokens')->plainTextToken;
+
         return response([
             'status' => 'success',
-            'token' => $user->createToken('sign_tokens')->plainTextToken,
+            'token' => $token,
         ], 201);
     }
 
@@ -43,9 +45,12 @@ class AuthController extends Controller
             ], 401);
         }
 
+
+        $token = $user->createToken('login_token')->plainTextToken;
+
         return response([
             'status' => 'success',
-            'token' => $user->createToken('login_token')->plainTextToken
+            'token' => $token
         ], 200);
     }
 
