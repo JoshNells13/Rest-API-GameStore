@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UserRequest;
 use App\Models\administrator;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -9,12 +10,8 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function SignUp(Request $request)
+    public function SignUp(UserRequest $request)
     {
-        $request->validate([
-            'username' => 'required|min:4|max:60|unique:users,username',
-            'password' => 'required|min:5|max:10',
-        ]);
 
         $user = User::create([
             'username' => $request->username,
@@ -27,12 +24,8 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request)
+    public function login(UserRequest $request)
     {
-        $request->validate([
-            'username' => 'required',
-            'password' => 'required',
-        ]);
 
         // Cek ke tabel users
         $user = User::where('username', $request->username)->first();
