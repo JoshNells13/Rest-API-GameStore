@@ -27,9 +27,6 @@ Route::prefix('v1')->group(function () {
 
 
         Route::get('admins', [UserController::class, 'getAdmins']);
-
-
-        Route::get('users', [UserController::class, 'getUsers']);
         Route::post('users', [UserController::class, 'store']);
         Route::put('users/{id}', [UserController::class, 'update']);
         Route::delete('users/{id}', [UserController::class, 'destroy']);
