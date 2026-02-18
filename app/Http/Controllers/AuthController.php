@@ -25,7 +25,9 @@ class AuthController extends Controller
             return response([
                 'status' => 'success',
                 'token' => $token,
-            ], 201);
+                'role' => ($user instanceof administrator) ? 'administrator' : 'user',
+                'username' => $user->username
+            ], 200);
         } catch (\Exception $e) {
             return response([
                 'status' => 'error',
@@ -63,7 +65,9 @@ class AuthController extends Controller
 
             return response([
                 'status' => 'success',
-                'token' => $token
+                'token' => $token,
+                'role' => ($user instanceof administrator) ? 'administrator' : 'user',
+                'username' => $user->username
             ], 200);
         } catch (\Exception $e) {
             return response([
