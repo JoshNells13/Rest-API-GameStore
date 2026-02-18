@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB as FacadesDB;
 
 class ScoreController extends Controller
 {
-    public function GetGameScores($slug)
+    public function index($slug)
     {
         try {
             $game = Game::where('slug', trim($slug))->firstOrFail();
@@ -21,7 +21,7 @@ class ScoreController extends Controller
                 FacadesDB::raw('MAX(scores.created_at) as timestamp')
             )
                 ->join('users', 'scores.user_id', '=', 'users.id')
-                ->whereIn('game_version_id', $game->gameversions()->pluck('id'))
+                ->whereIn('game_version_id', $game->versions()->pluck('id'))
                 ->groupBy('users.username')
                 ->orderByDesc('max_score')
                 ->get();
@@ -38,7 +38,8 @@ class ScoreController extends Controller
     }
 
 
-    public function StoreGameScore(Request $request, $slug)
+
+    public function store(Request $request, $slug)
     {
 
         try {

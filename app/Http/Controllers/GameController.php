@@ -151,7 +151,7 @@ class GameController extends Controller
             }
 
             return response([
-                'game' => $GamesDetail
+                'game' => GameResource::make($GamesDetail)
             ], 200);
         } catch (\Exception $e) {
             return response([
