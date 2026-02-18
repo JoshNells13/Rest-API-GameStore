@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('slug');
             $table->string('description');
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
-            $table->string('thumbnail');
             $table->string('ScoreCount')->nullable();
             $table->timestamps();
         });

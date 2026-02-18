@@ -10,14 +10,15 @@ class Game extends Model
     use HasApiTokens;
 
 
-    protected $fillable = ['title','slug','description','created_by','thumbnail'];
+    protected $fillable = ['title', 'slug', 'description', 'created_by', 'thumbnail'];
 
-    public function User(){
-        return $this->belongsTo(User::class,'created_by');
+    public function Author()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
-   public function gameversions() {
-    return $this->hasMany(Gameversion::class);
-}
-
+    public function versions()
+    {
+        return $this->hasMany(Gameversion::class);
+    }
 }

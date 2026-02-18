@@ -31,6 +31,7 @@ class GameController extends Controller
 
     public function index(GetGameRequest $request)
     {
+        $page = $request->input('page', 0);
         $size = $request->input('size', 10);
         $sortBy = $request->input('sortBy', 'title');
         $sortDir = $request->input('sortDir', 'asc');
@@ -53,17 +54,25 @@ class GameController extends Controller
                 break;
         }
 
-        $games = $query->paginate($size);
+        $totalElements = $query->count();
 
-        return GameResource::collection($games);
+        $games = $query->skip($page * $size)
+            ->take($size)
+            ->get();
+
+        return response([
+            'page' => $page,
+            'size' => $games->count(),
+            'totalElements' => $totalElements,
+            'content' => GameResource::collection($games)
+        ]);
     }
 
-    public function AddGame(GameRequest $request)
+
+    public function store(GameRequest $request)
     {
         try {
 
-            $file = $request->thumbnail;
-            $thumbnail = $file->store('games_thumbnail', 'public');
 
             $slug = $this->generateUniqueSlug($request->title);
 
@@ -72,12 +81,11 @@ class GameController extends Controller
                 'description' => $request->description,
                 'created_by' => $request->user()->id,
                 'slug' => $slug,
-                'thumbnail' => $thumbnail,
             ]);
 
             return response([
-                'message' => 'Add Game Success',
-                'data' => new GameResource($game)
+                'status' => 'success',
+                'data' => $game->slug
             ], 201);
         } catch (\Exception $e) {
             return response([
@@ -88,7 +96,7 @@ class GameController extends Controller
     }
 
 
-    public function UpdateGame(GameRequest $request, $slug)
+    public function update(GameRequest $request, $slug)
     {
         $game = Game::where('slug', $slug)->first();
 
@@ -109,13 +117,6 @@ class GameController extends Controller
             'description' => $request->description,
         ];
 
-        // Jika ada thumbnail baru
-        if ($request->hasFile('thumbnail')) {
-            $thumbnail = $request->file('thumbnail')
-                ->store('games_thumbnail', 'public');
-
-            $data['thumbnail'] = $thumbnail;
-        }
 
         $game->update($data);
 
@@ -126,7 +127,7 @@ class GameController extends Controller
     }
 
 
-    public function GetDetailGames(Request $request, $slug)
+    public function show(Request $request, $slug)
     {
         $GamesDetail = Game::where('slug', $slug)->first();
 
@@ -142,7 +143,7 @@ class GameController extends Controller
     }
 
 
-    public function DeleteGames(Request $request, $slug)
+    public function destroy(Request $request, $slug)
     {
 
         $Game = Game::where('slug', $slug)->first();

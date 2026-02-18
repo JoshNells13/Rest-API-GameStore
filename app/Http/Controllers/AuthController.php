@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UserRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
 use App\Models\administrator;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -10,12 +11,13 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function SignUp(UserRequest $request)
+    public function SignUp(RegisterRequest $request)
     {
         try {
             $user = User::create([
                 'username' => $request->username,
                 'password' => Hash::make($request->password),
+                'last_login_at' => now(),
             ]);
 
             $token = $user->createToken('sign_tokens')->plainTextToken;
@@ -36,7 +38,7 @@ class AuthController extends Controller
 
 
 
-    public function login(UserRequest $request)
+    public function Signin(LoginRequest $request)
     {
         try {
             // Cek ke tabel users
@@ -55,6 +57,7 @@ class AuthController extends Controller
                 ], 401);
             }
 
+            $user->update(['last_login_at' => now()]);
 
             $token = $user->createToken('login_token')->plainTextToken;
 

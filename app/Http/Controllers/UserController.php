@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UserRequest;
+use App\Http\Requests\RegisterRequest;
 use App\Models\administrator;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -30,7 +30,7 @@ class UserController extends Controller
     }
 
 
-    public function AddUser(UserRequest $request)
+    public function AddUser(RegisterRequest $request)
     {
 
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
@@ -45,7 +45,6 @@ class UserController extends Controller
         $user = User::create([
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'role' => $request->role
         ]);
 
 
@@ -56,7 +55,7 @@ class UserController extends Controller
     }
 
 
-    public function UpdateUser(UserRequest $request, $id)
+    public function UpdateUser(RegisterRequest $request, $id)
     {
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
 
