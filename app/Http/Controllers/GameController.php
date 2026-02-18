@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\GameRequest;
+use App\Http\Requests\GetGameRequest;
 use App\Http\Resources\GameResource;
 use App\Models\Game;
 use App\Models\gameversion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class GameController extends Controller
 {
@@ -27,108 +29,102 @@ class GameController extends Controller
         return $slug;
     }
 
-    public function index(Request $request)
+    public function index(GetGameRequest $request)
     {
-        $request->validate([
-            'page' => 'nullable|integer|min:0',
-            'size' => 'nullable|integer|min:1',
-            'sortBy' => 'nullable|in:title,popular,uploaddate',
-            'sortDir' => 'nullable|in:asc,desc'
-        ]);
-
-        $page = $request->input('page', 0);
         $size = $request->input('size', 10);
         $sortBy = $request->input('sortBy', 'title');
         $sortDir = $request->input('sortDir', 'asc');
 
-        $query = Game::has('versions'); // exclude game tanpa version
+        $query = Game::has('versions');
 
-        if ($sortBy === 'title') {
-            $query->orderBy('title', $sortDir);
+        switch ($sortBy) {
+            case 'popular':
+                $query->withCount('scores')
+                    ->orderBy('scores_count', $sortDir);
+                break;
+
+            case 'uploaddate':
+                $query->withMax('versions', 'created_at')
+                    ->orderBy('versions_max_created_at', $sortDir);
+                break;
+
+            default:
+                $query->orderBy('title', $sortDir);
+                break;
         }
 
-        if ($sortBy === 'popular') {
-            $query->withCount('scores')
-                ->orderBy('scores_count', $sortDir);
-        }
+        $games = $query->paginate($size);
 
-        if ($sortBy === 'uploaddate') {
-            $query->withMax('versions', 'created_at')
-                ->orderBy('versions_max_created_at', $sortDir);
-        }
-
-        $totalElements = $query->count();
-
-        $games = $query->skip($page * $size)
-            ->take($size)
-            ->get();
-
-        return response([
-            'page' => $page,
-            'size' => $games->count(),
-            'totalElements' => $totalElements,
-            'content' => GameResource::collection($games)
-        ], 200);
+        return GameResource::collection($games);
     }
+
     public function AddGame(GameRequest $request)
     {
+        try {
 
-        $file = $request->thumbnail;
-        $thumbnail = $file->storeAs('games_thumbnail', $file->getClientOriginalName(), 'public');
+            $file = $request->thumbnail;
+            $thumbnail = $file->store('games_thumbnail', 'public');
 
-        $slug = $this->generateUniqueSlug($request->title);
+            $slug = $this->generateUniqueSlug($request->title);
 
-        $Game = Game::create([
-            'title' => $request->title,
-            'description' => $request->description,
-            'created_by' => $request->user()->id,
-            'slug' => $slug,
-            'thumbnail' => $thumbnail,
-        ]);
+            $game = Game::create([
+                'title' => $request->title,
+                'description' => $request->description,
+                'created_by' => $request->user()->id,
+                'slug' => $slug,
+                'thumbnail' => $thumbnail,
+            ]);
 
-        return response([
-            'message' => 'Add Game Sukses',
-            'Game' => $Game
-        ]);
+            return response([
+                'message' => 'Add Game Success',
+                'data' => new GameResource($game)
+            ], 201);
+        } catch (\Exception $e) {
+            return response([
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
 
     public function UpdateGame(GameRequest $request, $slug)
     {
-        $Game = Game::where('slug', $slug)->first();
+        $game = Game::where('slug', $slug)->first();
 
-        if (!$Game) {
+        if (!$game) {
             return response([
                 'message' => 'Game Not Found'
             ], 404);
         }
 
-        $CheckUser = Auth::user()->id;
-
-        if (!Game::where('slug', $slug)->where('created_by', $CheckUser)->exists()) {
+        if ($game->created_by !== $request->user()->id) {
             return response([
-                'message' => 'Forbidden',
-                'status' => 'Not Developer'
+                'message' => 'Forbidden'
             ], 403);
         }
 
-        // 🔧 Simpan thumbnail baru
-        $file = $request->thumbnail;
-        $thumbnail = $file->storeAs('games_thumbnail', $file->getClientOriginalName(), 'public');
-
-
-        // 🔧 Update game
-        $Game->update([
+        $data = [
             'title' => $request->title,
             'description' => $request->description,
-            'created_by' => $request->user()->id,
-            'thumbnail' => $thumbnail,
-        ]);
+        ];
+
+        // Jika ada thumbnail baru
+        if ($request->hasFile('thumbnail')) {
+            $thumbnail = $request->file('thumbnail')
+                ->store('games_thumbnail', 'public');
+
+            $data['thumbnail'] = $thumbnail;
+        }
+
+        $game->update($data);
 
         return response([
-            'message' => 'Update Game Sukses',
-            'Game' => $Game
+            'message' => 'Update Game Success',
+            'data' => new GameResource($game)
         ]);
     }
+
 
     public function GetDetailGames(Request $request, $slug)
     {

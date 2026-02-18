@@ -12,54 +12,80 @@ class AuthController extends Controller
 {
     public function SignUp(UserRequest $request)
     {
+        try {
+            $user = User::create([
+                'username' => $request->username,
+                'password' => Hash::make($request->password),
+            ]);
 
-        $user = User::create([
-            'username' => $request->username,
-            'password' => Hash::make($request->password),
-        ]);
+            $token = $user->createToken('sign_tokens')->plainTextToken;
 
-        $token = $user->createToken('sign_tokens')->plainTextToken;
-
-        return response([
-            'status' => 'success',
-            'token' => $token,
-        ], 201);
+            return response([
+                'status' => 'success',
+                'token' => $token,
+            ], 201);
+        } catch (\Exception $e) {
+            return response([
+                'status' => 'error',
+                'message' => 'An error occurred during registration',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
+
+
 
     public function login(UserRequest $request)
     {
+        try {
+            // Cek ke tabel users
+            $user = User::where('username', $request->username)->first();
 
-        // Cek ke tabel users
-        $user = User::where('username', $request->username)->first();
-
-        // Kalau tidak ada di users, cek ke admins
-        if (!$user) {
-            $user = administrator::where('username', $request->username)->first();
-        }
+            // Kalau tidak ada di users, cek ke admins
+            if (!$user) {
+                $user = administrator::where('username', $request->username)->first();
+            }
 
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                return response([
+                    'status' => 'invalid',
+                    'message' => 'Wrong Username or Password'
+                ], 401);
+            }
+
+
+            $token = $user->createToken('login_token')->plainTextToken;
+
             return response([
-                'status' => 'invalid',
-                'message' => 'Wrong Username or Password'
-            ], 401);
+                'status' => 'success',
+                'token' => $token
+            ], 200);
+        } catch (\Exception $e) {
+            return response([
+                'status' => 'error',
+                'message' => 'An error occurred during login',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-
-        $token = $user->createToken('login_token')->plainTextToken;
-
-        return response([
-            'status' => 'success',
-            'token' => $token
-        ], 200);
     }
 
     public function SignOut(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $request->user()->currentAccessToken()->delete();
 
-        return response([
-            'status' => 'success'
-        ], 200);
+            return response([
+                'status' => 'success',
+                'message' => 'Successfully signed out'
+            ], 200);
+        } catch (\Exception $e) {
+            return response([
+                'status' => 'error',
+                'message' => 'Failed to sign out',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
