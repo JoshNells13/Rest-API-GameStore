@@ -30,6 +30,7 @@ Route::prefix('v1')->group(function () {
         Route::post('users', [UserController::class, 'store']);
         Route::put('users/{id}', [UserController::class, 'update']);
         Route::delete('users/{id}', [UserController::class, 'destroy']);
+        Route::get('users/{username}/games', [GameController::class, 'userGames']);
         Route::get('users/{username}', [UserController::class, 'show']);
 
 

@@ -7,6 +7,7 @@ use App\Http\Requests\GetGameRequest;
 use App\Http\Resources\GameResource;
 use App\Models\Game;
 use App\Models\gameversion;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -188,6 +189,32 @@ class GameController extends Controller
             $Game->delete();
 
             return response([], 204);
+        } catch (\Exception $e) {
+            return response([
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+
+    public function userGames($username)
+    {
+        try {
+            $user = User::where('username', $username)->first();
+
+            if (!$user) {
+                return response([
+                    'message' => 'User not found'
+                ], 404);
+            }
+
+            $games = Game::where('created_by', $user->id)->get();
+
+            return response([
+                'games' => GameResource::collection($games)
+            ], 200);
         } catch (\Exception $e) {
             return response([
                 'message' => 'Something went wrong',
