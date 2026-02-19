@@ -16,6 +16,12 @@ class GameUploadController extends Controller
     public function GameFileUpload(Request $request, $slug)
     {
         try {
+            $request->validate([
+                'zipfile' => 'required|file|mimes:zip',
+                'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+            ]);
+
+
             // 1️⃣ Validate required fields (zipfile + token)
             if (!$request->hasFile('zipfile') || !$request->token) {
                 return response("Invalid request", 400);
