@@ -7,6 +7,7 @@ use App\Models\gameversion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -16,83 +17,47 @@ class GameUploadController extends Controller
     public function GameFileUpload(Request $request, $slug)
     {
         try {
-            $request->validate([
-                'zipfile' => 'required|file|mimes:zip',
-                'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
-            ]);
 
-
-            // 1️⃣ Validate required fields (zipfile + token)
             if (!$request->hasFile('zipfile') || !$request->token) {
-                return response("Invalid request", 400);
+                return response("Missing required fields", 400);
             }
 
-            // 2️⃣ Validate token from form param (NOT header)
             $accessToken = PersonalAccessToken::findToken($request->token);
-
-            if (!$accessToken) {
-                return response("Invalid token", 401);
-            }
+            if (!$accessToken) return response("Invalid token", 401);
 
             $user = $accessToken->tokenable;
-
-
             $game = Game::where('slug', $slug)->first();
+            if (!$game) return response("Game not found", 404);
 
-            if (!$game) {
-                return response("Game not found", 404);
-            }
+            if ($user->id !== $game->created_by)
+                return response("User is not author", 403);
 
+            $newVersion = (GameVersion::where('game_id', $game->id)->max('version') ?? 0) + 1;
 
-            if ($user->id !== $game->created_by) {
-                return response("User is not author of the game", 403);
-            }
+            $zipFile = $request->file('zipfile');
 
-
-            $latestVersion = gameversion::where('game_id', $game->id)->max('version') ?? 0;
-            $newVersion = $latestVersion + 1;
-
-
-            $destinationPath = public_path("games/{$slug}/{$newVersion}");
-
-            if (!File::exists($destinationPath)) {
-                File::makeDirectory($destinationPath, 0777, true);
-            }
-
-
-            $zip = new ZipArchive;
-            $zipFile = $request->file('zipfile')->getRealPath();
-
-            if ($zip->open($zipFile) === TRUE) {
-                $zip->extractTo($destinationPath);
-                $zip->close();
-            } else {
-                return response("Failed to extract zip file", 400);
-            }
-
-
+            $zipPath = $zipFile->storeAs(
+                "games/{$slug}/{$newVersion}",
+                "{$slug}_v{$newVersion}.zip",
+                'public'
+            );
             gameversion::create([
                 'game_id' => $game->id,
                 'version' => $newVersion,
-                'storage_path' => "/games/{$slug}/{$newVersion}/"
+                'storage_path' => $zipPath
             ]);
-
 
             $game->update([
-                'storage_path' => "/games/{$slug}/{$newVersion}/"
+                'storage_path' => $zipPath
             ]);
 
-            if($request->hasFile('thumbnail')){
-                $thumbnailPath = $request->file('thumbnail')->store('thumbnails', 'public');
+            if ($request->hasFile('thumbnail')) {
                 $game->update([
-                    'thumbnail' => $thumbnailPath
+                    'thumbnail' => $request->file('thumbnail')->store('thumbnails', 'public')
                 ]);
             }
 
-
-            return response()->json([
-                'status' => 'success'
-            ], 201);
+            return response()->json(['status' => 'success'], 201);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -102,34 +67,21 @@ class GameUploadController extends Controller
     }
 
 
-    // public function GetGamesVersion(Request $request, $slug, $version)
-    // {
-    //     $GetGame = Game::where('slug', $slug)->first();
+    public function GetGamesVersion($slug, $version)
+    {
+        $game = Game::where('slug', $slug)->firstOrFail();
 
-    //     if (!$GetGame) {
-    //         return response([
-    //             'message' => 'Game Not found'
-    //         ], 404);
-    //     }
+        $gameVersion = GameVersion::where('game_id', $game->id)
+            ->where('version', $version)
+            ->firstOrFail();
 
-    //     $GetVersion = gameversion::where('game_id', $GetGame->id)->where('version', $version)->first();
+        if (!Storage::disk('public')->exists($gameVersion->storage_path)) {
+            return response()->json(['message' => 'File not found'], 404);
+        }
 
-
-    //     if (!$GetVersion) {
-    //         return response([
-    //             'message' => 'Game Not Found'
-    //         ], 404);
-    //     }
-
-    //     $filePath = storage_path('app/public/' . $GetVersion->storage_path);
-    //     if (!file_exists($filePath)) {
-    //         return response([
-    //             'message' => 'File Not Found'
-    //         ], 404);
-    //     }
-
-    //     return response()->file(
-    //         $filePath
-    //     );
-    // }
+        return Storage::disk('public')->download(
+            $gameVersion->storage_path,
+            $game->slug . "_v{$version}.zip"
+        );
+    }
 }

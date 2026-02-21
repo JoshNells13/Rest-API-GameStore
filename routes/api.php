@@ -42,9 +42,9 @@ Route::prefix('v1')->group(function () {
 
 
         Route::post('games/{slug}/upload', [GameUploadController::class, 'GameFileUpload']);
-        Route::get('games/{slug}/download/{version}', [GameUploadController::class, 'GetGamesVersion']);
 
         Route::get('games/{slug}/scores', [ScoreController::class, 'index']);
         Route::post('games/{slug}/scores', [ScoreController::class, 'store']);
     });
+    Route::get('games/{slug}/download/{version}', [GameUploadController::class, 'GetGamesVersion']);
 });

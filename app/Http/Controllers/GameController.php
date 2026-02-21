@@ -143,7 +143,7 @@ class GameController extends Controller
     public function show(Request $request, $slug)
     {
         try {
-            $GamesDetail = Game::where('slug', $slug)->first();
+            $GamesDetail = Game::with('versions', 'author')->where('slug', $slug)->first();
 
             if (!$GamesDetail) {
                 return  response([
@@ -210,7 +210,9 @@ class GameController extends Controller
                 ], 404);
             }
 
-            $games = Game::where('created_by', $user->id)->get();
+            $games = Game::with('versions')
+                ->where('created_by', $user->id)
+                ->get();
 
             return response([
                 'games' => GameResource::collection($games)
