@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
+use function Symfony\Component\Clock\now;
+
 class UserController extends Controller
 {
     public function getadmin(Request $request)
@@ -29,6 +31,14 @@ class UserController extends Controller
         ], 201);
     }
 
+    public function getUser(){
+        $user = User::all();
+
+        return response([
+            'user' => $user
+        ],200);
+    }
+
 
     public function store(RegisterRequest $request)
     {
@@ -45,6 +55,7 @@ class UserController extends Controller
         $user = User::create([
             'username' => $request->username,
             'password' => Hash::make($request->password),
+            'last_login_at' => now()
         ]);
 
 
@@ -78,7 +89,6 @@ class UserController extends Controller
         $user->update([
             'username' => $request->username,
             'password' => Hash::make($request->password),
-            'role' => $request->role
         ]);
 
 
