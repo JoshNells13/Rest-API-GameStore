@@ -31,12 +31,13 @@ class UserController extends Controller
         ], 201);
     }
 
-    public function getUser(){
+    public function getUser()
+    {
         $user = User::all();
 
         return response([
             'user' => $user
-        ],200);
+        ], 200);
     }
 
 
@@ -66,8 +67,20 @@ class UserController extends Controller
     }
 
 
-    public function update(RegisterRequest $request, $id)
+    public function update(Request $request, $username)
     {
+        $data = $request->validate([
+            'username' => 'required|string|max:255',
+            'password' => 'nullable|min:6'
+        ]);
+
+        if (!empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+
         $checkAdmin = administrator::where('id', $request->user()->id)->first();
 
         if (!$checkAdmin) {
@@ -77,7 +90,7 @@ class UserController extends Controller
             ], 403);
         }
 
-        $user = User::find($id);
+        $user = User::where('username', $username)->first();
 
         if (!$user) {
             return response([
@@ -86,10 +99,7 @@ class UserController extends Controller
             ], 403);
         }
 
-        $user->update([
-            'username' => $request->username,
-            'password' => Hash::make($request->password),
-        ]);
+        $user->update($data);
 
 
         return response([
@@ -126,17 +136,18 @@ class UserController extends Controller
     }
 
 
-    public function show($user){
-        $user = User::where('username', $user)->with(['Game','Score'])->first();
+    public function show($user)
+    {
+        $user = User::where('username', $user)->with(['Game', 'Score'])->first();
 
-        if(!$user){
+        if (!$user) {
             return response([
                 'message' => 'User Not Found'
-            ],404);
+            ], 404);
         }
 
         return response([
             'Data' => $user
-        ],200);
+        ], 200);
     }
 }
