@@ -4,81 +4,77 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
-use App\Models\administrator;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function SignUp(RegisterRequest $request)
+    public function signUp(RegisterRequest $request)
     {
         try {
             $user = User::create([
                 'username' => $request->username,
                 'password' => Hash::make($request->password),
+                'role' => 'player', // default role
                 'last_login_at' => now(),
             ]);
 
-            $token = $user->createToken('sign_tokens')->plainTextToken;
+            $token = $user->createToken('auth_token')->plainTextToken;
 
             return response([
                 'status' => 'success',
                 'token' => $token,
-                'role' => ($user instanceof administrator) ? 'administrator' : 'user',
-                'username' => $user->username
-            ], 200);
+                'user' => [
+                    'username' => $user->username,
+                    'role' => $user->role
+                ]
+            ], 201);
+
         } catch (\Exception $e) {
             return response([
                 'status' => 'error',
-                'message' => 'An error occurred during registration',
-                'error' => $e->getMessage()
+                'message' => 'Registration failed',
             ], 500);
         }
     }
 
-
-
-
-    public function Signin(LoginRequest $request)
+    public function signIn(LoginRequest $request)
     {
         try {
-            // Cek ke tabel users
             $user = User::where('username', $request->username)->first();
-
-            // Kalau tidak ada di users, cek ke admins
-            if (!$user) {
-                $user = administrator::where('username', $request->username)->first();
-            }
-
 
             if (!$user || !Hash::check($request->password, $user->password)) {
                 return response([
                     'status' => 'invalid',
-                    'message' => 'Wrong Username or Password'
+                    'message' => 'Wrong username or password'
                 ], 401);
             }
 
-            $user->update(['last_login_at' => now()]);
+            $user->update([
+                'last_login_at' => now()
+            ]);
 
-            $token = $user->createToken('login_token')->plainTextToken;
+            $token = $user->createToken('auth_token')->plainTextToken;
 
             return response([
                 'status' => 'success',
                 'token' => $token,
-                'role' => ($user instanceof administrator) ? 'administrator' : 'user',
-                'username' => $user->username
+                'user' => [
+                    'username' => $user->username,
+                    'role' => $user->role
+                ]
             ], 200);
+
         } catch (\Exception $e) {
             return response([
                 'status' => 'error',
-                'message' => 'An error occurred during login',
-                'error' => $e->getMessage()
+                'message' => 'Login failed',
             ], 500);
         }
     }
 
-    public function SignOut(Request $request)
+    public function signOut(Request $request)
     {
         try {
             $request->user()->currentAccessToken()->delete();
@@ -87,11 +83,11 @@ class AuthController extends Controller
                 'status' => 'success',
                 'message' => 'Successfully signed out'
             ], 200);
+
         } catch (\Exception $e) {
             return response([
                 'status' => 'error',
                 'message' => 'Failed to sign out',
-                'error' => $e->getMessage()
             ], 500);
         }
     }

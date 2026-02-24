@@ -168,7 +168,6 @@ class GameController extends Controller
         try {
             $Game = Game::where('slug', $slug)->first();
 
-            $CheckUser = Auth::user()->id;
 
 
             if (!$Game) {
@@ -177,11 +176,9 @@ class GameController extends Controller
                 ], 404);
             }
 
-
-            if (!Game::where('slug', $slug)->where('created_by', $CheckUser)->exists()) {
+            if ($Game->created_by !== $request->user()->id) {
                 return response([
-                    'message' => 'Forbidden',
-                    'status' => 'Not Developer'
+                    'message' => 'Forbidden'
                 ], 403);
             }
 

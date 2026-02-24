@@ -14,11 +14,9 @@ class UserController extends Controller
 {
     public function getadmin(Request $request)
     {
-        $user = administrator::all();
+        $admin = User::where('role','admin')->get();
 
-        $checkAdmin = administrator::where('id', $request->user()->id)->first();
-
-        if (!$checkAdmin) {
+        if ($request->user()->role !== 'admin') {
             return response([
                 'status' => 'forbidden',
                 'message' => 'You are not the administrator'
@@ -26,14 +24,14 @@ class UserController extends Controller
         }
 
         return response([
-            'totalelement' => $user->count(),
-            'content' => $user
+            'totalelement' => $admin->count(),
+            'content' => $admin
         ], 201);
     }
 
     public function getUser()
     {
-        $user = User::all();
+        $user = User::where('role', '!=','admin')->get();
 
         return response([
             'user' => $user
@@ -44,9 +42,7 @@ class UserController extends Controller
     public function store(RegisterRequest $request)
     {
 
-        $checkAdmin = administrator::where('id', $request->user()->id)->first();
-
-        if (!$checkAdmin) {
+        if ($request->user()->role !== 'admin') {
             return response([
                 'status' => 'forbidden',
                 'message' => 'You are not the administrator'
@@ -81,9 +77,7 @@ class UserController extends Controller
         }
 
 
-        $checkAdmin = administrator::where('id', $request->user()->id)->first();
-
-        if (!$checkAdmin) {
+        if ($request->user()->role !== 'admin') {
             return response([
                 'status' => 'forbidden',
                 'message' => 'You are not the administrator'
@@ -112,9 +106,7 @@ class UserController extends Controller
     public function destroy(Request $request, $id)
     {
 
-        $checkAdmin = administrator::where('id', $request->user()->id)->first();
-
-        if (!$checkAdmin) {
+        if ($request->user()->role !== 'admin') {
             return response([
                 'status' => 'forbidden',
                 'message' => 'You are not the administrator'

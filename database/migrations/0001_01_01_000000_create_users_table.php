@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('username');
             $table->string('password');
+            $table->enum('role',['admin','developer','player'])->default('player');
             $table->timestamp('last_login_at');
             $table->rememberToken();
             $table->timestamps();
